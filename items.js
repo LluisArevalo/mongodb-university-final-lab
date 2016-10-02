@@ -58,15 +58,34 @@ function ItemDAO(database) {
             num: 9999
         };
 
-        categories.push(category)
+        categories.push (category);
 
-        // TODO-lab1A Replace all code above (in this method).
+        this.db.collection('item').aggregate ([
+          {
+            $group: {
+              _id: { "category": "$category" },
+              num: { $sum: 1 }
+            }
+          },
+          {
+            $project: { _id: 1, num: 1 }
+          },
+          {
+            $sort: { _id: 1 }
+          }
+        ], function (err, result) {
+          result.forEach (function (category) {
+            var c = {
+              _id: category._id.category,
+              num: category.num
+            };
 
-        // TODO Include the following line in the appropriate
-        // place within your code to pass the categories array to the
-        // callback.
-        callback(categories);
-    }
+            categories.push(c);
+          });
+
+          callback (categories);
+        });
+    };
 
 
     this.getItems = function(category, page, itemsPerPage, callback) {
@@ -100,7 +119,9 @@ function ItemDAO(database) {
             pageItems.push(pageItem);
         }
 
-        // TODO-lab1B Replace all code above (in this method).
+        this.db.collection('item').aggregate ([
+
+        ]);
 
         // TODO Include the following line in the appropriate
         // place within your code to pass the items for the selected page
@@ -286,6 +307,20 @@ function ItemDAO(database) {
 
         return item;
     }
+
+    this.createItem = function (item) {
+      return {
+        _id: item._id,
+        title: item.title,
+        description: item.description,
+        slogan: item.slogan,
+        stars: item.starts,
+        category: item.category,
+        img_url: item.img_url,
+        price: item.price,
+        reviews: item.reviews
+      };
+    };
 }
 
 
