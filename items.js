@@ -25,109 +25,136 @@ function ItemDAO(database) {
     this.db = database;
 
     this.getCategories = function(callback) {
-        "use strict";
+      "use strict";
 
-        /*
-        * TODO-lab1A
-        *
-        * LAB #1A: Implement the getCategories() method.
-        *
-        * Write an aggregation query on the "item" collection to return the
-        * total number of items in each category. The documents in the array
-        * output by your aggregation should contain fields for "_id" and "num".
-        *
-        * HINT: Test your mongodb query in the shell first before implementing
-        * it in JavaScript.
-        *
-        * In addition to the categories created by your aggregation query,
-        * include a document for category "All" in the array of categories
-        * passed to the callback. The "All" category should contain the total
-        * number of items across all categories as its value for "num". The
-        * most efficient way to calculate this value is to iterate through
-        * the array of categories produced by your aggregation query, summing
-        * counts of items in each category.
-        *
-        * Ensure categories are organized in alphabetical order before passing
-        * to the callback.
-        *
-        */
+      /*
+      * TODO-lab1A
+      *
+      * LAB #1A: Implement the getCategories() method.
+      *
+      * Write an aggregation query on the "item" collection to return the
+      * total number of items in each category. The documents in the array
+      * output by your aggregation should contain fields for "_id" and "num".
+      *
+      * HINT: Test your mongodb query in the shell first before implementing
+      * it in JavaScript.
+      *
+      * In addition to the categories created by your aggregation query,
+      * include a document for category "All" in the array of categories
+      * passed to the callback. The "All" category should contain the total
+      * number of items across all categories as its value for "num". The
+      * most efficient way to calculate this value is to iterate through
+      * the array of categories produced by your aggregation query, summing
+      * counts of items in each category.
+      *
+      * Ensure categories are organized in alphabetical order before passing
+      * to the callback.
+      *
+      */
 
-        var categories = [];
-        var category = {
-            _id: "All",
-            num: 9999
-        };
+      var categories = [];
+      var category = {
+        _id: "All",
+        num: 9999
+      };
 
-        categories.push (category);
+      categories.push (category);
 
+      this.db.collection('item').aggregate ([
+        {
+          $group: {
+            _id: { "category": "$category" },
+            num: { $sum: 1 }
+          }
+        },
+        {
+          $project: { _id: 1, num: 1 }
+        },
+        {
+          $sort: { _id: 1 }
+        }
+      ], function (err, result) {
+        result.forEach (function (category) {
+          var c = {
+            _id: category._id.category,
+            num: category.num
+          };
+
+          categories.push(c);
+        });
+
+        callback (categories);
+      });
+    };
+
+    this.getItems = function(category, page, itemsPerPage, callback) {
+      "use strict";
+
+      /*
+       * TODO-lab1B
+       *
+       * LAB #1B: Implement the getItems() method.
+       *
+       * Create a query on the "item" collection to select only the items
+       * that should be displayed for a particular page of a given category.
+       * The category is passed as a parameter to getItems().
+       *
+       * Use sort(), skip(), and limit() and the method parameters: page and
+       * itemsPerPage to identify the appropriate products to display on each
+       * page. Pass these items to the callback function.
+       *
+       * Sort items in ascending order based on the _id field. You must use
+       * this sort to answer the final project questions correctly.
+       *
+       * Note: Since "All" is not listed as the category for any items,
+       * you will need to query the "item" collection differently for "All"
+       * than you do for other categories.
+       *
+       */
+
+      var pageItems = [];
+
+      if (category === "All") {
         this.db.collection('item').aggregate ([
           {
-            $group: {
-              _id: { "category": "$category" },
-              num: { $sum: 1 }
-            }
+            $sort: { _id: 1 }
           },
           {
-            $project: { _id: 1, num: 1 }
+            $skip: page
+          },
+          {
+            $limit: itemsPerPage
+          }
+          ], function (error, result) {
+            result.forEach (function (item) {
+              pageItems.push(item);
+            });
+
+            callback (pageItems);
+        });
+      } else {
+        this.db.collection('item').aggregate ([
+          {
+            $match: { category: category }
           },
           {
             $sort: { _id: 1 }
+          },
+          {
+            $skip: page
+          },
+          {
+            $limit: itemsPerPage
           }
-        ], function (err, result) {
-          result.forEach (function (category) {
-            var c = {
-              _id: category._id.category,
-              num: category.num
-            };
+          ], function (error, result) {
+            result.forEach (function (item) {
+              pageItems.push(item);
+            });
 
-            categories.push(c);
-          });
-
-          callback (categories);
+            callback (pageItems);
         });
+      }
     };
-
-
-    this.getItems = function(category, page, itemsPerPage, callback) {
-        "use strict";
-
-        /*
-         * TODO-lab1B
-         *
-         * LAB #1B: Implement the getItems() method.
-         *
-         * Create a query on the "item" collection to select only the items
-         * that should be displayed for a particular page of a given category.
-         * The category is passed as a parameter to getItems().
-         *
-         * Use sort(), skip(), and limit() and the method parameters: page and
-         * itemsPerPage to identify the appropriate products to display on each
-         * page. Pass these items to the callback function.
-         *
-         * Sort items in ascending order based on the _id field. You must use
-         * this sort to answer the final project questions correctly.
-         *
-         * Note: Since "All" is not listed as the category for any items,
-         * you will need to query the "item" collection differently for "All"
-         * than you do for other categories.
-         *
-         */
-
-        var pageItem = this.createDummyItem();
-        var pageItems = [];
-        for (var i=0; i<5; i++) {
-            pageItems.push(pageItem);
-        }
-
-        this.db.collection('item').aggregate ([
-
-        ]);
-
-        // TODO Include the following line in the appropriate
-        // place within your code to pass the items for the selected page
-        // to the callback.
-        callback(pageItems);
-    }
 
 
     this.getNumItems = function(category, callback) {
@@ -153,7 +180,7 @@ function ItemDAO(database) {
          // TODO Include the following line in the appropriate
          // place within your code to pass the count to the callback.
         callback(numItems);
-    }
+    };
 
 
     this.searchItems = function(query, page, itemsPerPage, callback) {
@@ -195,7 +222,7 @@ function ItemDAO(database) {
         // place within your code to pass the items for the selected page
         // of search results to the callback.
         callback(items);
-    }
+    };
 
 
     this.getNumSearchItems = function(query, callback) {
@@ -217,7 +244,7 @@ function ItemDAO(database) {
         */
 
         callback(numItems);
-    }
+    };
 
 
     this.getItem = function(itemId, callback) {
@@ -241,7 +268,7 @@ function ItemDAO(database) {
         // place within your code to pass the matching item
         // to the callback.
         callback(item);
-    }
+    };
 
 
     this.getRelatedItems = function(callback) {
@@ -276,7 +303,7 @@ function ItemDAO(database) {
             comment: comment,
             stars: stars,
             date: Date.now()
-        }
+        };
 
         // TODO replace the following two lines with your code that will
         // update the document with a new review.
@@ -287,7 +314,7 @@ function ItemDAO(database) {
         // place within your code to pass the updated doc to the
         // callback.
         callback(doc);
-    }
+    };
 
 
     this.createDummyItem = function() {
@@ -306,20 +333,6 @@ function ItemDAO(database) {
         };
 
         return item;
-    }
-
-    this.createItem = function (item) {
-      return {
-        _id: item._id,
-        title: item.title,
-        description: item.description,
-        slogan: item.slogan,
-        stars: item.starts,
-        category: item.category,
-        img_url: item.img_url,
-        price: item.price,
-        reviews: item.reviews
-      };
     };
 }
 
